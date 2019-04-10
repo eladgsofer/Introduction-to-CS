@@ -29,44 +29,46 @@ class GameOfLife(game_of_life_interface.GameOfLife):
                                 '6': self.__init_grin}
 
         self.rules = rules
-
         born, survive = self.rules.split('/')
         self.born = [int(b) * self.ALIVE for b in born[1:]]
-        self.survive = [int(s)*self.ALIVE for s in survive[1:]]
+        self.survive = [int(s) * self.ALIVE for s in survive[1:]]
 
         self.board  = np.zeros(self.nxn, dtype='int')
         self.__init_board()
 
 
-    # def find_neighbors_sum(self,m,n):
-    #     neig_sum=0
-    #     for r in range(max(0, m-1), min(self.board_size-1, m+1)+1):
-    #         for c in range(max(0,n-1), min(self.board_size-1,n+1)+1):
-    #             neig_sum+=self.board[r,c]
-    #
-    #     return neig_sum - self.board[m,n]
     def update(self):
         ''' This method updates the board game by the rules of the game.
         Input None.
         Output None.
         '''
-        new_board  = np.zeros(self.nxn, dtype='int')
+
+        # TODO first run on the inside... and in the end on the borders..
+        # TODO than no need to check all the conditions
+        # TODO neighbors sequentially trick - make it more efficient
+
+        new_board = np.zeros(self.nxn, dtype='int')
         for r_index, r   in enumerate(self.board):
-            #TODO first run on the inside... and in the end on the borders..
-            #TODO than no need to check all the conditions
-            #TODO neighbors sequentially trick - make it more efficient
+
             for c_index, cell  in enumerate(r):
-                neighbors = self.board[max(0, r_index - 1):min(self.board_size, r_index + 1) + 1,
-                            max(0, c_index - 1):min(self.board_size, c_index + 1) + 1]
+
+                if r_index in self.edges or c_index in self.edges:
+                    # Row borders
+                    r_f, r_l  = max(r_index-1, 0), min(r_index+1, self.board_size-1)
+                    # Column borders
+                    c_f, c_l = max(c_index - 1, 0), min(c_index + 1, self.board_size - 1)
+                    # Slicing not included the last border, therefore +1
+                    neighbors = self.board[r_f:r_l + 1, c_f:c_l + 1]
+                else:
+                    neighbors = self.board[r_index-1:r_index+2, c_index-1:c_index+2]
 
                 neig_sum = sum(sum(neighbors)) - cell
-                if cell ==self.DEAD:
+                if cell == self.DEAD:
                     if neig_sum in self.born:
                         new_board[r_index, c_index] = self.ALIVE
                 else:
                     if neig_sum in self.survive:
                         new_board[r_index, c_index] = self.ALIVE
-                        continue
 
         self.board = new_board
 
@@ -83,9 +85,8 @@ class GameOfLife(game_of_life_interface.GameOfLife):
         Input None.
         Output a figure should be opened and display the board.
         '''
-        plt.matshow(self.return_board(), fignum=self.FIGNUM)
+        plt.matshow(self.board, fignum=self.FIGNUM)
         plt.show()
-
 
     def return_board(self):
         ''' This method returns a list of the board position. The board is a two-dimensional list that every
@@ -146,13 +147,12 @@ class GameOfLife(game_of_life_interface.GameOfLife):
 
 
 if __name__ == '__main__':
-    import time
-    t1 = time.time()
     a = GameOfLife(board_size=21, starting_position=5,
                    rules='B3/S23')
+    import time
+    t1= time.time()
     for i in range(115):
         a.update()
-    print(time.time()-t1)
-
-
+    print (time.time()-t1)
+    a.save_board_to_file('1000.png')
 

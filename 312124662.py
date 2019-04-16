@@ -14,8 +14,7 @@ class GameOfLife(game_of_life_interface.GameOfLife):
     PROB_MAPPER = {1: [0.5, 0.5], 2: [0.2, 0.8], 3: [0.8, 0.2]}
 
     def __init__(self, board_size, starting_position=1, rules='B3/S23'):
-        super(GameOfLife, self).__init__(board_size, starting_position, rules)
-
+        #
         self.board_size = board_size
         self.nxn = tuple([self.board_size] * 2)
         self.edges = [0, self.board_size-1]
@@ -30,11 +29,12 @@ class GameOfLife(game_of_life_interface.GameOfLife):
 
         self.rules = rules
         born, survive = self.rules.split('/')
-        self.born = [int(b) * self.ALIVE for b in born[1:]]
-        self.survive = [int(s) * self.ALIVE for s in survive[1:]]
+        self.born = [int(b)*self.ALIVE for b in born[1:]]
+        self.survive = [int(s)*self.ALIVE for s in survive[1:]]
 
-        self.board  = np.zeros(self.nxn, dtype='int')
-        self.__init_board()
+        self.board  = np.random.choice(1, size=self.nxn)
+        # board init
+        self.position_mapper[str(self.starting_position)]()
 
 
     def update(self):
@@ -47,9 +47,10 @@ class GameOfLife(game_of_life_interface.GameOfLife):
         # TODO than no need to check all the conditions
         # TODO neighbors sequentially trick - make it more efficient
 
-        new_board = np.zeros(self.nxn, dtype='int')
-        for r_index, r   in enumerate(self.board):
+        #TODO wrap the matrix than remove the if edges condition
 
+        new_board = np.random.choice(1, size=self.nxn)
+        for r_index, r   in enumerate(self.board):
             for c_index, cell  in enumerate(r):
 
                 if r_index in self.edges or c_index in self.edges:
@@ -62,11 +63,12 @@ class GameOfLife(game_of_life_interface.GameOfLife):
                 else:
                     neighbors = self.board[r_index-1:r_index+2, c_index-1:c_index+2]
 
-                neig_sum = sum(sum(neighbors)) - cell
+                neig_sum = sum(sum(neighbors))
                 if cell == self.DEAD:
                     if neig_sum in self.born:
                         new_board[r_index, c_index] = self.ALIVE
                 else:
+                    neig_sum-=self.ALIVE
                     if neig_sum in self.survive:
                         new_board[r_index, c_index] = self.ALIVE
 
@@ -94,7 +96,7 @@ class GameOfLife(game_of_life_interface.GameOfLife):
         Input None.
         Output a list that holds the board with a size of size_of_board*size_of_board.
         '''
-        return self.board
+        return self.board.tolist()
 
     def __init_pulsar(self):
 
@@ -113,9 +115,6 @@ class GameOfLife(game_of_life_interface.GameOfLife):
 
         for y, x in hor_start_points:
             self.board[y,x:x+3] = self.ALIVE
-
-    def __init_board(self):
-        self.position_mapper[str(self.starting_position)]()
 
     def __init_gosper_glide(self):
         GOSPER_GLIDER_INDEXS = [(14, 10), (14, 11), (15, 10), (15, 11), (14, 20),
@@ -147,11 +146,11 @@ class GameOfLife(game_of_life_interface.GameOfLife):
 
 
 if __name__ == '__main__':
-    a = GameOfLife(board_size=21, starting_position=5,
-                   rules='B3/S23')
     import time
     t1= time.time()
-    for i in range(115):
+    a = GameOfLife(board_size=999, starting_position=2,
+                   rules='B3/S23')
+    for i in range(1):
         a.update()
     print (time.time()-t1)
     a.save_board_to_file('1000.png')

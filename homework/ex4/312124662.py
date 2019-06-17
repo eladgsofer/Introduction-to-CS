@@ -9,6 +9,8 @@ class HydroCamel(auv_interface.Auv):
     HIDDEN_MINE = 6
     MINE_FOUND = 7
     SONAR_RADAR = 8
+    #TODO REPLACE FORMULA - BETWEEN A AND C POINTS
+    #TODO 45 DEGREES ANGLE PROBLEM
     def __init__(self, _sonar_range, _sonar_angle, _map_size,
                  _initial_position, _velocity, _duration, _mines_map):
         ''' init method for class Auv.
@@ -29,6 +31,7 @@ class HydroCamel(auv_interface.Auv):
         self.sonar_angle = np.radians(_sonar_angle)
         self.map_size = _map_size
         self.initial_position = _initial_position
+
         # Assuming start Velocity angel is 0
         self.vel_angle = 0
 
@@ -56,8 +59,7 @@ class HydroCamel(auv_interface.Auv):
         Input None.
         Output A list of tuples. Each tuple holds the coordinates (Yi , Xi) of found mines. The list should be sorted.
         '''
-        #TODO SORTING...
-        return sorted(self.found_mines, key=lambda x: x[1])
+        return self.quicksort(self.found_mines)
 
     def get_sonar_fov(self):
         ''' Returns all the current  (Yi , Xi) coordinates of the map which are in range for the sonar
@@ -79,9 +81,7 @@ class HydroCamel(auv_interface.Auv):
 
         for p_y, row in enumerate(self.mines_map):
             for p_x, cell_val in enumerate(row):
-                w1 = (a_x*(c_y-a_y)+(p_y-a_y)*(c_x-a_x)-p_x*(c_y-a_y))/((b_y-a_y)*(c_x-a_x)-(b_x-a_x)*(c_y-a_y))
-                w2 = (p_y-a_y-w1*(b_y-a_y))/(c_y-a_y)
-                if w1+w2<=1 and w1>=0 and w2>=0:
+                if self.is_point_in_triangle(a,b,c, (p_y,p_x)):
                     found_points[(p_y,p_x)] = True
                     self.current_map[p_y, p_x] = self.SONAR_RADAR
                     if self.mines_map[p_y,p_x] == 1:
@@ -92,6 +92,28 @@ class HydroCamel(auv_interface.Auv):
         self.current_map[a_y, a_x] = self.SONAR_HEAD
         self.prev_head = (a_y, a_x)
         return found_points
+
+    @staticmethod
+    def is_point_in_triangle(a, b, c, p):
+        """ Handles a case where the denominator is 0 in the 'is_point_in_triangle_internal' function"""
+        if c[0] - a[0] == 0:
+            tmp = b
+            b = c
+            c = tmp
+        return HydroCamel.is_point_in_triangle_internal(a, b, c, p)
+
+    @staticmethod
+    def is_point_in_triangle_internal(a, b, c, p):
+        """ Receives a,b,c as the triangle vertices and determines if point p is inside that triangle
+            I'm using an algorithm that was found online. """
+        w1 = (a[1] * (c[0] - a[0]) + (p[0] - a[0]) * (c[1] - a[1]) - p[1] * (
+        c[0] - a[0])) / \
+             ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+        w2 = (p[0] - a[0] - w1 * (b[0] - a[0])) / (c[0] - a[0])
+
+        return (np.allclose(w1, 0) or w1 >= 0) and (
+        np.allclose(w2, 0) or w2 >= 0) and \
+               (np.allclose(w1 + w2, 1) or (w1 + w2) <= 1)
 
     def display_map(self):
         ''' Display the current map.
@@ -106,7 +128,10 @@ class HydroCamel(auv_interface.Auv):
         Input None.
         Output the Direction of movement of the AUV in Degrees.
         '''
-        return self.vel_angle
+        angle = np.degrees(self.vel_angle)
+        if angle < 0:
+            angle += 360
+        return angle
 
     def set_course(self, _velocity, _duration):
         ''' Receive new values for the velocity and duration properties. Append the new values to the current ones
@@ -114,13 +139,8 @@ class HydroCamel(auv_interface.Auv):
         Duration as list of integers
         Output None.
         '''
-
-        if type(_velocity) == list:
-            self.velocity.append(_velocity)
-            self.velocity.append(_duration)
-        else:
-            self.velocity.extend(_velocity)
-            self.duration.extend(_duration)
+        self.velocity.extend(_velocity)
+        self.duration.extend(_duration)
 
 
     def time_step(self):
@@ -167,8 +187,33 @@ class HydroCamel(auv_interface.Auv):
             for step in range(step_number_per_velocity):
                 self.time_step()
                 self.display_map()
+    @staticmethod
+    def quicksort(lst):
+        '''
+        This function impliments the quicksort algorithm that we have learned in the class fitted into this code's requirements
+        :param lst: a list to be sorted
+        :return: a sorted list
+        '''
+        if len(lst) <= 1:
+            return lst
+        else:
+            pivot = lst[0]
+            smaller = [e for e in lst if HydroCamel.smaller_than(e, pivot)]
+            equal = [pivot]
+            greater = [e for e in lst if HydroCamel.smaller_than(pivot, e)]
+        return HydroCamel.quicksort(smaller) + equal + HydroCamel.quicksort(greater)
 
-
+    @staticmethod
+    def smaller_than(a, b):
+        '''
+        Determine if tuple a is smaller than tuple b
+        '''
+        if a[1] < b[1]:
+            return True
+        elif a[1] == b[1] and a[0] < b[0]:
+            return True
+        else:
+            return False
 
 if __name__ == "__main__":
     # example 1

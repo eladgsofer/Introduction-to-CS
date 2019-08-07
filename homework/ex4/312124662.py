@@ -58,7 +58,7 @@ class HydroCamel(auv_interface.Auv):
         Input None.
         Output A list of tuples. Each tuple holds the coordinates (Yi , Xi) of found mines. The list should be sorted.
         '''
-        return self.quicksort(self.found_mines)
+        return self.bubble_sort(self.found_mines)
 
     def get_sonar_fov(self):
         ''' Returns all the current  (Yi , Xi) coordinates of the map which are in range for the sonar
@@ -73,19 +73,25 @@ class HydroCamel(auv_interface.Auv):
 
 
         found_points = {}
+        # Triangle Points
         a, b, c = self.initial_position, self.left_sonar_p, self.right_sonar_p
+
+        # head point
         a_y, a_x = a
 
         for p_y, row in enumerate(self.mines_map):
             for p_x, cell_val in enumerate(row):
                 if self.is_point_in_triangle(a,b,c, (p_y,p_x)):
+                    # Insert the point into the dictionary & update map
                     found_points[(p_y,p_x)] = True
                     self.current_map[p_y, p_x] = self.SONAR_RADAR
                     if cell_val == 1:
+                        # If a mine was found in the sonar, add it
                         self.current_map[p_y, p_x] = self.MINE_FOUND
                         if (p_y, p_x) not in self.found_mines:
                             self.found_mines.append((p_y,p_x))
 
+        # head point update
         self.current_map[a_y, a_x] = self.SONAR_HEAD
         self.prev_head = (a_y, a_x)
         return found_points
@@ -101,7 +107,10 @@ class HydroCamel(auv_interface.Auv):
         :param p:
         :return:
         """
-        # in case of zero division
+
+        # in case of zero division - while 90 degrees
+        # np.close because - sometimes the number was diff between numbers was almost
+        # 0, therfor wasn't 0
         if np.allclose((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]), 0)\
                 or np.allclose(c[0] - a[0], 0):
             tmp = b
@@ -131,7 +140,7 @@ class HydroCamel(auv_interface.Auv):
         Input None.
         Output the Direction of movement of the AUV in Degrees.
         '''
-
+        # taking care of negative angle
         angle = np.degrees(self.vel_angle)
         return angle + 360 if angle < 0 else angle
 
@@ -153,14 +162,18 @@ class HydroCamel(auv_interface.Auv):
 
         self.curr_velocity = np.array(self.velocity[0])
         self.vel_angle = np.arctan2(*self.curr_velocity)
+
         if self.vel_angle <0:
             self.vel_angle+=2*np.pi
 
         # Head of the sonar no needs to rotate
         self.initial_position += self.curr_velocity
 
+        # rotate via angles update
         self.rotate()
+        # sonar search
         self.get_sonar_fov()
+        # update duration
         self.duration[0]-=1
 
     def rotate(self):
@@ -186,6 +199,9 @@ class HydroCamel(auv_interface.Auv):
         Input None.
         Output None.
         '''
+        #TODO Possible Problem - Substraction isn't in time_step
+        # sum the duration and make a while loop with a couter
+        # the update will happen inside the step !!!
         while len(self.duration) != 0:
             if self.duration[0]==0:
                 self.duration.pop(0)
@@ -194,70 +210,29 @@ class HydroCamel(auv_interface.Auv):
                 self.time_step()
                 self.display_map()
 
-    @staticmethod
-    def quicksort(lst):
+
+    def bubble_sort(self, lst):
         '''
-        quick sort from recitation...
+        bubble sort implementation
         '''
-        if len(lst) <= 1:
-            return lst
-        else:
-            pivot = lst[len(lst)//2]
-            smaller = [e for e in lst if HydroCamel.is_smaller(e, pivot)]
-            equal = [pivot]
-            greater = [e for e in lst if HydroCamel.is_smaller(pivot, e)]
-        return HydroCamel.quicksort(smaller) + equal + HydroCamel.quicksort(greater)
+        for i in range(len(lst)):
+            for j in range(len(lst) -1 -i):
+                if self.is_bigger(lst[j], lst[j+1]):
+                   tmp = lst[j+1]
+                   lst[j+1] = lst[j]
+                   lst[j] = tmp
+        return lst
 
     @staticmethod
-    def is_smaller(a, b):
+    def is_bigger(p1, p2):
         '''
         sub routine which sorts via 2 keys
         '''
-        if a[1] < b[1]:
+        if p1[1] > p2[1]:
             return True
-        elif a[1] == b[1] and a[0] < b[0]:
+        elif p1[1] == p2[1] and p1[0] > p2[0]:
             return True
 
         return False
-#
-# if __name__ == "__main__":
-#     # example 1
-#     map_size = (20, 15)
-#     mines = np.zeros(map_size).tolist()
-#     mines[16][6] = 1
-#     mines[12][4] = 1
-#     mines[14][10] = 1
-#     mines[17][11] = 1
-#     velocity = list()
-#     velocity.append([0, 1])
-#     sonar_range = 6
-#     sonar_angle = 60
-#     initial_position = (14, 1)
-#     duration = [8]
-#
-#     game1 = HydroCamel(sonar_range, sonar_angle, map_size, initial_position, velocity, duration, mines)
-#     for i in range(0,7):
-#         game1.time_step()
-#         game1.display_map()
-#     sonar_res = game1.get_sonar_fov()
-#     game1.display_map()
-#     print(game1.get_mines())
-#     print(game1.get_sonar_fov())
-#
-#     # example 2
-#     sonar_range = 5
-#     sonar_angle = 30
-#     map_size = (25, 20)
-#     initial_position = (10, 10)
-#     velocity = list()
-#     velocity.append([2, 2])
-#     velocity.append([-2, -2])
-#     velocity.append([0, 2])
-#     velocity.append([2, 0])
-#     duration = [2, 2, 2, 2]
-#     mines = np.random.choice([1, 0], map_size, p=[0.05, 0.95]).tolist()
-#
-#     game2 = HydroCamel(sonar_range, sonar_angle, map_size, initial_position, velocity, duration, mines)
-#     game2.start()
-#     print(game2.get_mines())
-#     print(game2.get_sonar_fov())
+
+

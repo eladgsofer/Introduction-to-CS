@@ -1,0 +1,6 @@
+{"Machine Learning": ["AI", "ML[0-9]+|$"],
+  "Bible Figures": ["Moses", "Noah", "Shem", "UncleSam", "Pharaoh", "Abram"],
+"Bible_Calls": ["God", "Blessed"]}
+
+
+

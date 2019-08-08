@@ -1,6 +1,6 @@
-{"Machine Learning": ["AI", "ML[0-9]+|$"],
-  "Bible Figures": ["Moses", "Noah", "Shem", "UncleSam", "Pharaoh", "Abram"],
-"Bible_Calls": ["God", "Blessed"]}
+{"Machine Learning": {"strings": ["AI"], "regex": ["ML[0-9]+|$"]},
+  "Bible Figures": {"strings": ["Moses ", "Noah", "Shem", "UncleSam", "Pharaoh", "Abram"], "regex": []},
+"Bible_Calls": {"strings": ["God", "Blessed"], "regex": []}}
 
 
 

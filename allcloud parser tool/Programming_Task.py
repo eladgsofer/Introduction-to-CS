@@ -26,24 +26,37 @@ class AllCloudParsingTool(object):
         with open(self.ann_fname) as fd:
             self.ann_dict = json.load(fd)
 
+    @staticmethod
+    def verify_regex_match(match):
+        if match:
+            if match[0] == "":
+                return False
+            return True
+
     def start(self):
         """
         Main function which starts the tool.
         print the number of matches
         """
-        ann_occurrences = dict.fromkeys(self.ann_dict.keys(), 0)
-        for label, regex_list in self.ann_dict.items():
-            for r_pattern in regex_list:
-                r_pattern = str(r_pattern)
-                try:
-                    re_matches = re.findall(r_pattern, self.data)
-                except Exception:
-                    print "Regex syntax error, check the config file"
-                    raise
+        ann_freq_dict = dict.fromkeys(self.ann_dict.keys(), 0)
+        for label, regex_dict in self.ann_dict.items():
+            string_lst = regex_dict["strings"]
+            regex_lst = regex_dict["regex"]
+            for s in string_lst:
+                # In case a word - determine a whole word regex boundaries
+                str_matches = re.findall(r'\b' + str(s) + r'\b', self.data)
 
-                ann_occurrences[label] += len(re_matches)
+                if self.verify_regex_match(str_matches):
+                    ann_freq_dict[label] += len(str_matches)
 
-        print '\n{0}\n\n{1}'.format('Label occurrences:', ann_occurrences)
+            for r in regex_lst:
+                # In case a generic regex - simply pass the regex.
+                regex_matches = re.findall(str(r), self.data)
+
+                if self.verify_regex_match(regex_matches):
+                    ann_freq_dict[label] += len(regex_matches)
+
+        print '\n{0}\n\n{1}'.format('Label occurrences:', ann_freq_dict)
 
 if __name__ == '__main__':
     parser = ArgumentParser("Programming Task - AllCloud")
